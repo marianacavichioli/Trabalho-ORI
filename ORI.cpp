@@ -37,12 +37,9 @@ void InserirRegistro(){
 
 	arquivo = fopen("teste.txt", "r+");
 
-	retorno = fread(&reg[qntreg], sizeof(Registro), 1, arquivo); 
-	if(retorno==1){
-		while(retorno==1){
-			qntreg++;
-			retorno = fread(&reg[qntreg], sizeof(Registro), 1, arquivo); 
-		}
+	fread(&reg[qntreg], sizeof(Registro), 1, arquivo); 
+	while(!feof(arquivo)){
+		fread(&reg[qntreg], sizeof(Registro), 1, arquivo); 
 	}
 
 	printf("%d registros\n", qntreg );
