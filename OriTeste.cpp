@@ -11,7 +11,6 @@
 #define TAMANHO_REGISTRO 100
 
 FILE *arquivo;
-int quantidade_registros;
 
 //Registro de 100 bytes
 struct Registro {
@@ -34,6 +33,19 @@ struct Bloco* criarBloco(void){
 	return bloco;
 }
 
+int quantidadeBytes(){
+	int tamanho = 0;
+	arquivo = fopen("teste.txt", "rt");
+	if(arquivo != NULL){
+		fseek(arquivo, 0, SEEK_END);
+		tamanho = ftell(arquivo);
+	}else{
+		printf("Arquivo inexistente\n");
+	}
+
+	fclose(arquivo);
+	return tamanho;
+}
 
 //Fun��o para criar arquivo.
 void CriarArquivo() {
@@ -49,6 +61,10 @@ void CriarArquivo() {
 }
 
 void escreverRegistro(Bloco* bloco){
+
+	int quantidade_registros = 0;
+
+	quantidade_registros = quantidadeBytes()/100;
 	
 	printf("CPF: \n");
 	scanf("%s", &bloco->registro[quantidade_registros].cpf);
@@ -61,41 +77,26 @@ void escreverRegistro(Bloco* bloco){
 	printf("\n");
 	
 	fwrite(&bloco->registro[quantidade_registros], TAMANHO_REGISTRO, 1, arquivo);
-	//quantidade_registros++;		
+	quantidade_registros++;		
 }
 
-int QuantidadeRegistros(Bloco* bloco) {
-	int retorno;
-
-	quantidade_registros = 0;
-
-	fseek(arquivo, 0, SEEK_SET);
-
-	retorno = fread(bloco, TAM_BLOCOS, 1, arquivo);
-	if (retorno == 1) {
-		while (retorno == 1) {
-			quantidade_registros++;
-			retorno = fread(bloco, TAM_BLOCOS, 1, arquivo);
-		}
-	}
-
-	printf("%d registros\n", quantidade_registros);
-	
-	return quantidade_registros;
-}
 
 //Fun��o para inserir um registro no arquivo.
 void InserirRegistro() {
-	int final;
+	int final, quantidade_registros = 0, quantidade_blocos = 0;
 	Bloco* bloco = criarBloco();
 	arquivo = fopen("teste.txt", "r+");
 	int retorno;
 
+	quantidade_registros = quantidadeBytes()/100;
+	quantidade_blocos = quantidadeBytes()/512;
+
 	while(!feof(arquivo)){
-		fread(bloco, TAM_BLOCOS, 1, arquivo);
+		fread(&bloco->registro[quantidade_registros], TAMANHO_REGISTRO, 1, arquivo);
 	}
 
 	do {
+		printf("%d\n", quantidade_registros);
 		printf("Digite 1 para inserir os registros ou 0 para sair: \n");
 		scanf("%d", &final);
 
@@ -103,7 +104,7 @@ void InserirRegistro() {
 			if(!arquivo){
 				printf("Não foi possivel abrir o arquivo\n");
 			}else{			
-				quantidade_registros = QuantidadeRegistros(bloco);
+				//quantidade_registros = QuantidadeRegistros(bloco);
 				if(quantidade_registros == 0){
 					printf("Nenhum Registro\n");
 					fwrite(bloco, TAM_BLOCOS, 1, arquivo);
@@ -112,12 +113,13 @@ void InserirRegistro() {
 					
 				}else if(quantidade_registros == 5){
 					printf("Mais de 5\n");
-					fseek(arquivo, quantidade_registros*TAMANHO_REGISTRO, SEEK_CUR);
+					fseek(arquivo, 0, SEEK_END);
 					fwrite(bloco, TAM_BLOCOS, 1, arquivo);
-					fseek(arquivo, quantidade_registros*TAMANHO_REGISTRO, SEEK_CUR);
+					fseek(arquivo, quantidade_blocos*TAM_BLOCOS, SEEK_CUR);
 					escreverRegistro(bloco);
 					
 				}else if(quantidade_registros < 5){
+					fseek(arquivo, 0, SEEK_SET);
 					fseek(arquivo, quantidade_registros*TAMANHO_REGISTRO, SEEK_CUR);
 					escreverRegistro(bloco);
 				}
@@ -134,9 +136,10 @@ void ListarRegistro() {
 
 	Bloco* bloco = criarBloco();
 
-	//quantidade_registros = 0;
-	int final, retorno;
+	int final, retorno, quantidade_registros = 0;
 	arquivo = fopen("teste.txt", "r");
+
+	quantidade_registros = quantidadeBytes()/100;
 
 	if (arquivo != NULL) {
 		fread(bloco, TAM_BLOCOS, 1, arquivo);
