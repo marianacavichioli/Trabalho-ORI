@@ -1,4 +1,4 @@
-#include <stdio.h>
+ï»¿#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -6,9 +6,12 @@
 #define TAMANHO_CPF 11
 #define TAMANHO_IDADE 3
 #define TAMANHO_ENDERECO 38
+#define QNT_REGISTROS 5
+#define TAM_BLOCOS 512
+#define TAMANHO_REGISTRO 100
 
 FILE *arquivo;
-int quantidade_registros;
+static int quantidade_registros = 0;
 
 //Registro de 100 bytes
 struct Registro {
@@ -18,90 +21,122 @@ struct Registro {
 	char idade[TAMANHO_IDADE];
 };
 
-struct Registro registro[5];
+struct Bloco {
+	struct Registro registro[QNT_REGISTROS];
+	char complemento[12];
+};
+
+//struct Bloco bloco;
+
+struct Bloco* criarBloco(void) {
+	Bloco* bloco = (Bloco*)malloc(sizeof(Bloco));
+	memset(bloco, 0, TAM_BLOCOS);
+	return bloco;
+}
 
 
-//Função para criar arquivo.
+//Funcao para criar arquivo.
 void CriarArquivo() {
 
 	arquivo = fopen("teste.txt", "wt");
 	printf("Arquivo criado\n");
 	if (arquivo == NULL) {
-		printf("Não foi possível abrir o arquivo");
+		printf("Nao foi possï¿½vel abrir o arquivo");
 	}
 
 	fclose(arquivo);
 	arquivo = NULL;
 }
 
-int QuantidadeRegistros() {
-	int quantidade_registros = 0;
-	int retorno;
+void escreverRegistro(Bloco* bloco) {
 
-	retorno = fread(&registro[quantidade_registros], sizeof(Registro), 1, arquivo);
-	if (retorno == 1) {
-		while (retorno == 1) {
-			quantidade_registros++;
-			retorno = fread(&registro[quantidade_registros], sizeof(Registro), 1, arquivo);
-		}
-	}
+	printf("CPF: \n");
+	scanf("%s", &bloco->registro[quantidade_registros].cpf);
+	printf("Nome: \n");
+	scanf("%s", &bloco->registro[quantidade_registros].nome);
+	printf("Endereco: \n");
+	scanf("%s", &bloco->registro[quantidade_registros].endereco);
+	printf("Idade: \n");
+	scanf("%s", &bloco->registro[quantidade_registros].idade);
+	printf("\n");
 
-	printf("%d registros\n", quantidade_registros);
-	
-	return quantidade_registros;
+	fwrite(&bloco->registro[quantidade_registros], TAMANHO_REGISTRO, 1, arquivo);
+	quantidade_registros += quantidade_registros;
 }
 
-//Função para inserir um registro no arquivo.
+
+//Funcao para inserir um registro no arquivo.
 void InserirRegistro() {
-
-	quantidade_registros = 0;
 	int final;
-
+	Bloco* bloco = criarBloco();
 	arquivo = fopen("teste.txt", "r+");
+	int retorno;
 
-	quantidade_registros = QuantidadeRegistros();
-
-	if (quantidade_registros < 5) {
-		do {
-			printf("Digite 1 para inserir os registros ou 0 para sair: \n");
-			scanf("%d", &final);
-
-			if (final == 1) {
-				printf("CPF: \n");
-				scanf("%s", &registro[quantidade_registros].cpf);
-				printf("Nome: \n");
-				scanf("%s", &registro[quantidade_registros].nome);
-				printf("Endereço: \n");
-				scanf("%s", &registro[quantidade_registros].endereco);
-				printf("Idade: \n");
-				scanf("%s", &registro[quantidade_registros].idade);
-				printf("\n");
-				
-				fwrite(&registro[quantidade_registros], sizeof(Registro), 1, arquivo);
-				quantidade_registros++;
-			}
-		} while ((final != 0) && (quantidade_registros < 5));
+	while (!feof(arquivo)) {
+		fread(bloco, TAM_BLOCOS, 1, arquivo);
 	}
+
+	do {
+		printf("Digite 1 para inserir os registros ou 0 para sair: \n");
+		scanf("%d", &final);
+
+		if (final == 1) {
+			if (!arquivo) {
+				printf("NÃ£o foi possivel abrir o arquivo\n");
+			}
+			else {
+				printf("%d registros\n", quantidade_registros);
+				//quantidade_registros = QuantidadeRegistros(bloco);
+				if (quantidade_registros == 0) {
+					printf("Nenhum Registro\n");
+					fwrite(bloco, TAM_BLOCOS, 1, arquivo);
+					fseek(arquivo, 0, SEEK_SET);
+					escreverRegistro(bloco);
+
+				}
+				else if (quantidade_registros == 5) {
+					printf("Mais de 5\n");
+					fseek(arquivo, quantidade_registros*TAMANHO_REGISTRO, SEEK_CUR);
+					fwrite(bloco, TAM_BLOCOS, 1, arquivo);
+					fseek(arquivo, quantidade_registros*TAMANHO_REGISTRO, SEEK_CUR);
+					escreverRegistro(bloco);
+
+				}
+				else if (quantidade_registros < 5) {
+					printf("%d registros\n", quantidade_registros);
+					fseek(arquivo, quantidade_registros*TAMANHO_REGISTRO, SEEK_CUR);
+					escreverRegistro(bloco);
+				}
+
+			}
+		}
+	} while (final != 0);
 
 	fclose(arquivo);
 }
 
-//Função para listar registros do arquivo.
+//Funï¿½ï¿½o para listar registros do arquivo.
 void ListarRegistro() {
 
-	quantidade_registros = 0;
+	Bloco* bloco = criarBloco();
+
+	//quantidade_registros = 0;
 	int final, retorno;
 	arquivo = fopen("teste.txt", "r");
 
 	if (arquivo != NULL) {
-		fread(&registro[quantidade_registros], sizeof(Registro), 1, arquivo);
+		fread(bloco, TAM_BLOCOS, 1, arquivo);
 		while (!feof(arquivo)) {
-			printf("%s ", registro[quantidade_registros].cpf);
-			printf("%s ", registro[quantidade_registros].nome);
-			printf("%s ", registro[quantidade_registros].endereco);
-			printf("%s ", registro[quantidade_registros].idade);
+			printf("%s ", bloco->registro[quantidade_registros].cpf);
+			fseek(arquivo, TAMANHO_CPF, SEEK_CUR);
+			printf("%s ", bloco->registro[quantidade_registros].nome);
+			fseek(arquivo, TAMANHO_NOME, SEEK_CUR);
+			printf("%s ", bloco->registro[quantidade_registros].endereco);
+			fseek(arquivo, TAMANHO_ENDERECO, SEEK_CUR);
+			printf("%s ", bloco->registro[quantidade_registros].idade);
 			printf("\n");
-			fread(&registro[quantidade_registros], sizeof(Registro), 1, arquivo);
+			fseek(arquivo, TAMANHO_IDADE, SEEK_CUR);
+			fread(bloco, TAM_BLOCOS, 1, arquivo);
 		}
 
 		fclose(arquivo);
@@ -112,82 +147,83 @@ void ListarRegistro() {
 	}
 }
 
-//Função para buscar registros no arquivo
-void BuscarRegistro() {
-	char chave[11];
-	
-	printf("Digite o CPF que deseja buscar\n");
-	scanf("%s", &chave);
-	if (strlen(chave) != 11)
-	{
-		while (strlen(chave) != 11)
-		{
-			printf("CPF invalido!\n");
-			printf("Digite o CPF que deseja buscar\n");
-			scanf("%s", &chave);
-		}
-	}
-	
-	if (arquivo != NULL)
-	{
-		arquivo = fopen("teste.txt", "r");
-		bool encontrou = false;
-		int quantidade_registros = QuantidadeRegistros();
-		fseek(arquivo, SEEK_SET, 0);
-		while (!encontrou)
-		{
-			if (quantidade_registros == 0)
-			{
-				printf("Nenhum registro cadastrado\n");
-				break;
-			}
-			else
-			{
-				fread(&registro[quantidade_registros], sizeof(Registro), 1, arquivo);
-				while (!feof(arquivo)) {
-					if(registro[quantidade_registros].cpf == chave)
-					fread(&registro[quantidade_registros], sizeof(Registro), 1, arquivo);
-				}
-			}
-		}
-	}
-	else
-	{
-		printf("Arquivo nao foi criado!\n");
-	}
+//Funï¿½ï¿½o para buscar registros no arquivo
+/*void BuscarRegistro() {
+char chave[11];
 
+printf("Digite o CPF que deseja buscar\n");
+scanf("%s", &chave);
+if (strlen(chave) != 11)
+{
+while (strlen(chave) != 11)
+{
+printf("CPF invalido!\n");
+printf("Digite o CPF que deseja buscar\n");
+scanf("%s", &chave);
+}
 }
 
+if (arquivo != NULL)
+{
+arquivo = fopen("teste.txt", "r");
+bool encontrou = false;
+int quantidade_registros = QuantidadeRegistros();
+fseek(arquivo, SEEK_SET, 0);
+while (!encontrou)
+{
+if (quantidade_registros == 0)
+{
+printf("Nenhum registro cadastrado\n");
+break;
+}
+else
+{
+fread(&registro[quantidade_registros], sizeof(Registro), 1, arquivo);
+while (!feof(arquivo)) {
+if(registro[quantidade_registros].cpf == chave)
+fread(&registro[quantidade_registros], sizeof(Registro), 1, arquivo);
+}
+}
+}
+}
+else
+{
+printf("Arquivo nao foi criado!\n");
+}
+
+}*/
+
 int main() {
-	//struct Registro registro[512];
 	int opcoes;
 
-	printf("Escolha uma das opções: \n");
-	printf("1-Criar arquivo\n2-Inserir novo registro\n3-Buscar por um registro\n4-Remover um registro\n5-Listar registros\n6-Compactação do arquivo\n");
+	printf("Escolha uma das opcoes: \n");
+	printf("0-Encerrar programa\n1-Criar arquivo\n2-Inserir novo registro\n3-Buscar por um registro\n4-Remover um registro\n5-Listar registros\n6-Compactacao do arquivo\n");
 	printf("\n");
 	scanf("%d", &opcoes);
 
-	switch (opcoes) {
-	case 1:
-		CriarArquivo();
-		break;
-	case 2:
-		InserirRegistro();
-		break;
-	case 3:
-		BuscarRegistro();
-		break;
-	//case 4:
-	//	RemoverRegistro();
-	//	break;
-	case 5:
-		ListarRegistro();
-		break;
-		/*case 6:
-		CompactacaoArquivo();
-		break;*/
-	}
+	while (opcoes != 0)
+	{
+		if (opcoes == 1)
+			CriarArquivo();
+		else if (opcoes == 2)
+			InserirRegistro();
+		else if (opcoes == 3)
+			//BuscarRegistro();
+			printf("BUSCAR\n");
+		else if (opcoes == 4)
+			//	RemoverRegistro();
+			printf("REMOVER\n");
+		else if (opcoes == 5)
+			ListarRegistro();
+		else if (opcoes == 6)
+			// CompactacaoArquivo();
+			printf("COMPACTACAO\n");
 
+		printf("\nEscolha uma das opcoes: \n");
+		printf("0-Encerrar programa\n1-Criar arquivo\n2-Inserir novo registro\n3-Buscar por um registro\n4-Remover um registro\n5-Listar registros\n6-Compactacao do arquivo\n");
+		printf("\n");
+		scanf("%d", &opcoes);
+	}
 
 	return 0;
 }
