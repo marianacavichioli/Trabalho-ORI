@@ -9,8 +9,7 @@
 #define QNT_REGISTROS 5
 #define TAM_BLOCOS 512
 #define TAMANHO_REGISTRO 100
-
-FILE *arquivo;
+#define TAMANHO_CABECALHO 3
 
 //Registro de 100 bytes
 struct Registro {
@@ -21,51 +20,39 @@ struct Registro {
 };
 
 struct Bloco{
+	int cabecalho[TAMANHO_CABECALHO];
 	struct Registro registro[QNT_REGISTROS];
-	char complemento[12];
 };
 
 //struct Bloco bloco;
 
-struct Bloco* criarBloco(void){
+struct Bloco* criarBloco(){
 	Bloco* bloco = (Bloco*) malloc(sizeof(Bloco));
 	memset(bloco,0,TAM_BLOCOS);
+	bloco->cabecalho[0] = 8;
+	bloco->cabecalho[1] = 8;
+	bloco->cabecalho[2] = 8;
 	return bloco;
-}
-
-int quantidadeBytes(){
-	int tamanho = 0;
-	arquivo = fopen("teste.txt", "rt");
-	if(arquivo != NULL){
-		fseek(arquivo, 0, SEEK_END);
-		tamanho = ftell(arquivo);
-	}else{
-		printf("Arquivo inexistente\n");
-	}
-
-	fclose(arquivo);
-	return tamanho;
 }
 
 //Fun��o para criar arquivo.
 void CriarArquivo() {
+	FILE *arquivo;
 
-	arquivo = fopen("teste.txt", "wt");
+	arquivo = fopen("teste.txt", "wb");
 	printf("Arquivo criado\n");
 	if (arquivo == NULL) {
 		printf("N�o foi poss�vel abrir o arquivo");
+	}else{
+		Bloco* bloco = criarBloco();
+		//fwrite(bloco, TAM_BLOCOS, 1, arquivo);
+		free(bloco);
+		fclose(arquivo);
 	}
-
-	fclose(arquivo);
-	arquivo = NULL;
 }
 
-void escreverRegistro(Bloco* bloco){
+void escreverRegistro(Bloco* bloco, FILE* arquivo, int quantidade_registros, int quantidade_blocos){
 
-	int quantidade_registros = 0;
-
-	quantidade_registros = quantidadeBytes()/100;
-	
 	printf("CPF: \n");
 	scanf("%s", &bloco->registro[quantidade_registros].cpf);
 	printf("Nome: \n");
@@ -75,92 +62,105 @@ void escreverRegistro(Bloco* bloco){
 	printf("Idade: \n");
 	scanf("%s", &bloco->registro[quantidade_registros].idade);
 	printf("\n");
-	
-	fwrite(&bloco->registro[quantidade_registros], TAMANHO_REGISTRO, 1, arquivo);
-	quantidade_registros++;		
+
+	fseek(arquivo, quantidade_blocos*TAM_BLOCOS, SEEK_SET);
+	fwrite(bloco, TAM_BLOCOS, 1, arquivo);
 }
 
 
 //Fun��o para inserir um registro no arquivo.
-void InserirRegistro() {
-	int final, quantidade_registros = 0, quantidade_blocos = 0;
-	Bloco* bloco = criarBloco();
-	arquivo = fopen("teste.txt", "r+");
-	int retorno;
+int InserirRegistro() {
 
-	quantidade_registros = quantidadeBytes()/100;
-	quantidade_blocos = quantidadeBytes()/512;
-
-	while(!feof(arquivo)){
-		fread(&bloco->registro[quantidade_registros], TAMANHO_REGISTRO, 1, arquivo);
-	}
+	FILE *arquivo;
+	int quantidade_registros = 0, quantidade_blocos = 0;
+	int final;
+	Bloco* bloco_registro = criarBloco();
+	arquivo = fopen("teste.txt", "rb+");
+	
 
 	do {
-		printf("%d\n", quantidade_registros);
 		printf("Digite 1 para inserir os registros ou 0 para sair: \n");
 		scanf("%d", &final);
 
 		if (final == 1) {
 			if(!arquivo){
 				printf("Não foi possivel abrir o arquivo\n");
+				return 0;
 			}else{			
-				//quantidade_registros = QuantidadeRegistros(bloco);
-				if(quantidade_registros == 0){
-					printf("Nenhum Registro\n");
-					fwrite(bloco, TAM_BLOCOS, 1, arquivo);
-					fseek(arquivo, 0, SEEK_SET);
-					escreverRegistro(bloco);
-					
-				}else if(quantidade_registros == 5){
-					printf("Mais de 5\n");
-					fseek(arquivo, 0, SEEK_END);
-					fwrite(bloco, TAM_BLOCOS, 1, arquivo);
-					fseek(arquivo, quantidade_blocos*TAM_BLOCOS, SEEK_CUR);
-					escreverRegistro(bloco);
-					
-				}else if(quantidade_registros < 5){
-					fseek(arquivo, 0, SEEK_SET);
-					fseek(arquivo, quantidade_registros*TAMANHO_REGISTRO, SEEK_CUR);
-					escreverRegistro(bloco);
+				while(fread(bloco_registro, TAM_BLOCOS, 1, arquivo) != 0){
+					if((bloco_registro->cabecalho[0] == 8) && (bloco_registro->cabecalho[1] == 8) && (bloco_registro->cabecalho[2] == 8)){
+						while(quantidade_registros <= 4){
+							if(strcmp(bloco_registro->registro[quantidade_registros].cpf, "00000000000") == 0 || strcmp(bloco_registro->registro[quantidade_registros].cpf, "-1-1-1-1-1-1-1-1-1-1-1") == 0){
+								escreverRegistro(bloco_registro, arquivo, quantidade_registros, quantidade_blocos);
+								free(bloco_registro);
+								fclose(arquivo);
+								return 1;	
+							}else{
+								quantidade_registros++;
+							}
+						}
+						quantidade_blocos++;
+						quantidade_registros = 0;
+					}else{
+						return 0;
+					}
 				}
-				
+				bloco_registro = criarBloco();
+				printf("CPF: \n");
+				scanf("%s", &bloco_registro->registro[0].cpf);
+				printf("Nome: \n");
+				scanf("%s", &bloco_registro->registro[0].nome);
+				printf("Endereco: \n");
+				scanf("%s", &bloco_registro->registro[0].endereco);
+				printf("Idade: \n");
+				scanf("%s", &bloco_registro->registro[0].idade);
+				printf("\n");
+				fseek(arquivo, quantidade_blocos*TAM_BLOCOS, SEEK_SET);
+				fwrite(bloco_registro, TAM_BLOCOS, 1, arquivo);
+				free(bloco_registro);
+				fclose(arquivo);
+				return 1;
 			}
 		}		
 	} while (final != 0);
-
-	fclose(arquivo);
 }
 
-//Fun��o para listar registros do arquivo.
-void ListarRegistro() {
+//Funcao para listar registros do arquivo.
+int ListarRegistro() {
+	
+	FILE *arquivo;
+	arquivo = fopen("teste.txt", "rb+");
 
-	Bloco* bloco = criarBloco();
+	Bloco* bloco_registro = criarBloco();
 
-	int final, retorno, quantidade_registros = 0;
-	arquivo = fopen("teste.txt", "r");
+	int quantidade_blocos = 0, quantidade_registros = 0;
+	
 
-	quantidade_registros = quantidadeBytes()/100;
+	if (!arquivo) {
+		printf("Falha ao abrir arquivo\n");
+		return 0;
+	}else{
+		while(fread(bloco_registro, TAM_BLOCOS, 1, arquivo) != 0){
+			if((bloco_registro->cabecalho[0] == 8) && (bloco_registro->cabecalho[1] == 8) && (bloco_registro->cabecalho[2] == 8)){
+				while(quantidade_registros <= 4){
+					if(strcmp(bloco_registro->registro[quantidade_registros].cpf, "00000000000") == 0 || strcmp(bloco_registro->registro[quantidade_registros].cpf, "-1-1-1-1-1-1-1-1-1-1-1") == 0){
+						quantidade_registros++;
+					}else{
+						printf("CPF: %s\nNome: %s\nEndereco: %s\nIdade: %s\n\n", bloco_registro->registro[quantidade_registros].cpf, bloco_registro->registro[quantidade_registros].nome, bloco_registro->registro[quantidade_registros].endereco, bloco_registro->registro[quantidade_registros].idade);
+						quantidade_registros++;
+					}
+				}
 
-	if (arquivo != NULL) {
-		fread(bloco, TAM_BLOCOS, 1, arquivo);
-		while (!feof(arquivo)) {
-			printf("%s ", bloco->registro[quantidade_registros].cpf);
-			fseek(arquivo, TAMANHO_CPF, SEEK_CUR);
-			printf("%s ", bloco->registro[quantidade_registros].nome);
-			fseek(arquivo, TAMANHO_NOME, SEEK_CUR);
-			printf("%s ", bloco->registro[quantidade_registros].endereco);
-			fseek(arquivo, TAMANHO_ENDERECO, SEEK_CUR);
-			printf("%s ", bloco->registro[quantidade_registros].idade);
-			printf("\n");
-			fseek(arquivo, TAMANHO_IDADE, SEEK_CUR);
-			fread(bloco, TAM_BLOCOS, 1, arquivo);
+				quantidade_blocos++;
+				quantidade_registros = 0;
+			}else{
+				return 0;
+			}
 		}
 
+		free(bloco_registro);
 		fclose(arquivo);
-	}
-	else
-	{
-		printf("Falha ao abrir arquivo");
+		return 1;
 	}
 }
 
