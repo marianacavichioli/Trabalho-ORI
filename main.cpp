@@ -1,4 +1,4 @@
-#include "funcoes_basicas.hpp"
+#include "funcoes.hpp"
 
 
 int main() {
