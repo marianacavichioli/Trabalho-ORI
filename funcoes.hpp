@@ -42,16 +42,6 @@ struct Bloco* criarBloco(){
 	return bloco;
 }
 
-//Funcao para criar um novo arquivo.
-void criarArquivo(FILE* arquivo) {
-	arquivo = fopen("arquivo.txt", "wb");
-	printf("Arquivo criado\n\n");
-	if (arquivo == NULL) {
-		printf("Nao foi possivel abrir o arquivo");
-	}
-	fclose(arquivo);
-}
-
 //Funcao para copiar o registro de um bloco a um bloco auxiliar.
 void copiarRegistro(Bloco* bloco_registro, Bloco* bloco_auxiliar,int quantidade_registros, int qntRegistro_auxiliar){
 	strcpy(bloco_auxiliar->registro[qntRegistro_auxiliar].cpf, bloco_registro->registro[quantidade_registros].cpf);
@@ -113,6 +103,7 @@ void escreverRegistro(Bloco* bloco, FILE* arquivo, int quantidade_registros, int
 	printf("\nCPF: \n");
 	scanf("%s", &bloco->registro[quantidade_registros].cpf);
 	
+	//Verifica se a entrada de CPF eh uma entrada valida.
 	cpfValido(bloco, quantidade_registros);
 		
 	printf("\nNome: \n");
@@ -122,6 +113,7 @@ void escreverRegistro(Bloco* bloco, FILE* arquivo, int quantidade_registros, int
 	printf("\nIdade: \n");
 	scanf("%s", &bloco->registro[quantidade_registros].idade);
 	
+	//Verifica se a entrada de idade eh uma entrada valida.
 	idadeValida(bloco, quantidade_registros);
 
 	printf("\n");
@@ -132,6 +124,16 @@ void escreverRegistro(Bloco* bloco, FILE* arquivo, int quantidade_registros, int
 
 
 ///////////////////FUNCOES BASICAS///////////////////////
+
+//Funcao para criar um novo arquivo.
+void criarArquivo(FILE* arquivo) {
+	arquivo = fopen("arquivo.txt", "wb");
+	printf("Arquivo criado\n\n");
+	if (arquivo == NULL) {
+		printf("Nao foi possivel abrir o arquivo");
+	}
+	fclose(arquivo);
+}
 
 //Funcao para inserir um novo registro no arquivo.
 int inserirRegistro() {
